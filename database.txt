@@ -1,0 +1,25 @@
+( real
+    ( you dream about it
+        ( from movie
+            ( from game
+                ( Ayanami Rei nil nil )
+                ( Carl Johnson nil nil )
+            )
+            ( Optimus Prime nil nil )
+        )
+        ( otl u Yavorskogo nil nil )
+    )
+    ( person
+        ( animal
+            ( Biden nil nil )
+            ( on phystech
+                ( Stepan Chelomov nil nil )
+                ( poltorashka nil nil )
+            )
+        )
+        ( family member
+            ( Alina Polonskaya nil nil )
+            ( your mom nil nil )
+        )
+    )
+)
