@@ -13,6 +13,7 @@
 #include "akinator.h"
 #include "colors.h"
 #include "str_cmp.h"
+#include "stack.h"
 
 static void_sex  MainPage(node_t* root_ptr, Akinator* akinator);
 
@@ -28,18 +29,23 @@ static void_sex  GetDataFromUser(Akinator* akinator, elem_t users_word, elem_t u
 //======================================== PUBLIC ========================================
 //----------------------------------------- GAME -----------------------------------------
 void_sex Game() {
-    PrintDisneyGenie();
+    //PrintDisneyGenie();
     printf("Welcome to the Akinator Game!\n\n");
 
     Akinator* akinator = AkinatorCtor();
+                                            // FIXME вынести хотя бы в константу
     node_t* root_ptr = GetTreeFromDataBaseFile("database.txt", akinator);
 
     MainPage(root_ptr, akinator);
 }
 //--------------------------------------- MAIN PAGE --------------------------------------
-static void_sex MainPage(node_t* root_ptr, Akinator* akinator) {
-    while (1) {
+static void_sex MainPage(node_t* root_ptr, Akinator* akinator) { // NOTE лучше основную структуру(в данном случае акинатор) передавать первым
+    assert(root_ptr != nullptr);
+    assert(akinator != nullptr);
+
+    while (1) { // NOTE можно true
         printf("%sPlease, choose the game mode:%s\n", TEXT_BLUE, DEFAULT);
+
 
         printf("%s[G]%suess\n", BCKGR_YELLOW, TEXT_YELLOW);
         printf("%s[D]%sefine\n", BCKGR_YELLOW, TEXT_YELLOW);
@@ -89,7 +95,7 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
 
     if (AskQuestions(root_ptr, akinator) == YES) {
         printf("%sIt's so easy to read people's minds these days, lol, almost boring. Do you dare challenge me once more? Or will you, the greatest, return to the menu to shamefully admit defeat and leave the game? Which will you choose, player?%s",  TEXT_BLUE, DEFAULT);
-        printf("%s[C]%sontinue%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
+        printf("%s[K]%eep up%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
         printf("\t%s[E]%sxit\n", TEXT_RED, DEFAULT);
 
         int choice_num = GetAnswer();
@@ -101,14 +107,14 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
                 case MENU:
                     MainPage(root_ptr, akinator);
                     break;
-                case CONTINUE:
+                case KEEP_UP:
                     GuessMode(root_ptr, akinator);
                     break;
                 default:
-                    printf("%sInvalid choice%s u stupid ass. Please enter one of the letters %s('C'/'M'/'E')%s.\n", TEXT_BLUE, DEFAULT, BCKGR_BLUE, DEFAULT);
+                    printf("%sInvalid choice%s u stupid ass. Please enter one of the letters %s('K'/'M'/'E')%s.\n", TEXT_BLUE, DEFAULT, BCKGR_BLUE, DEFAULT);
                     break;
             }
-    }
+    } // NOTE } else {
     else {
         printf("%sI've never known about this before... Share your knowledge, will you?%s", TEXT_BLUE, DEFAULT);
 
@@ -135,11 +141,11 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
             }
         }
 
-       // GetDataFromUser(akinator, users_word, users_feature);
+       //? GetDataFromUser(akinator, users_word, users_feature);
 
         InsertNewNode(root_ptr, users_word, users_feature, akinator->last_node);
-        printf("%sThank you, player. I'll consider that in the future.\n Do you wish to continue?%s", TEXT_BLUE, DEFAULT);
-         printf("%s[C]%sontinue%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
+        printf("%sThank you, player. I'll consider that in the future.\n Do you wish to keep up?%s", TEXT_BLUE, DEFAULT);
+        printf("%s[K]%seep up%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
         printf("\t%s[E]%sxit\n", TEXT_RED, DEFAULT);
 
         int choice_num = GetAnswer();
@@ -151,7 +157,7 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
                 case MENU:
                     MainPage(root_ptr, akinator);
                     break;
-                case CONTINUE:
+                case KEEP_UP:
                     GuessMode(root_ptr, akinator);
                     break;
                 default:
@@ -164,32 +170,48 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
 
 //--------------------------------------- DEFINER ----------------------------------------
 static void_sex DefineMode(node_t* root_ptr, Akinator* akinator) {
+    assert(root_ptr != nullptr);
+    assert(akinator != nullptr);
+
     printf("%sDefine mode selected.%s\n", TEXT_YELLOW, DEFAULT);
 
-    //принимаем слово от пользователя, ищем его в дереве
-    //1) если слова нет, возвращаем ошибку, очищаем стэк в структуре акинатора
-    //2) по мере поиска запоминаем признаки в стэк в структуре акинатора
-    //причем при проходе налево вместе с признаком записываем в стэк НЕ
-    //выводим само слово, "- это" и возвращаем признаки pop()-ом из стэка
+
+
+    //!принимаем слово от пользователя, ищем его в дереве
+    //!1) если слова нет, возвращаем ошибку, очищаем стэк в структуре акинатора
+    //!2) по мере поиска запоминаем признаки в стэк в структуре акинатора
+    //!причем при проходе налево вместе с признаком записываем в стэк НЕ
+    //!выводим само слово, "- это" и возвращаем признаки pop()-ом из стэка
+
+
+
 
 }
 
 //--------------------------------------- COMPARER ---------------------------------------
 static void_sex CompareObjects(node_t* root_ptr, Akinator* akinator) {
+    assert(root_ptr != nullptr);
+    assert(akinator != nullptr);
+
     printf("%sCompare Two Objects mode selected.%s\n", TEXT_YELLOW, DEFAULT);
-    //два выхова дефайнера и стркмп?
+    //? два выхова дефайнера и стркмп?
 }
 
 //--------------------------------------- SHOW TREE --------------------------------------
 static void_sex ShowTree(node_t* root_ptr, Akinator* akinator) {
+    assert(root_ptr != nullptr);
+    assert(akinator != nullptr);
+
     printf("%sShow Tree mode selected.%s\n", TEXT_YELLOW, DEFAULT);
 
-    //дамп по сути
+    //! дамп по сути
 
 }
 
 //------------------------------------------ EXIT ----------------------------------------
 static void_sex ExitProgram(node_t* root_ptr, Akinator* akinator) {
+    assert(root_ptr != nullptr);
+    assert(akinator != nullptr);
 
     printf("%sAre you sure you want to exit the programm?%s", TEXT_BLUE, DEFAULT);
     printf("%s[Y]%sES%s   //   [N]O (go back to the menu)  ", BCKGR_BLUE, TEXT_BLUE, DEFAULT);
@@ -204,7 +226,7 @@ static void_sex ExitProgram(node_t* root_ptr, Akinator* akinator) {
 
                 TreeDtor(root_ptr);
                 AkinatorDtor(akinator);
-                //additional info maybe (e.g. "You've played this much times for this time have added this much new info and so on")
+                //? additional info maybe (e.g. "You've played this much times for this time have added this much new info and so on")
 
                 return;
 
@@ -259,7 +281,7 @@ static void_sex GetDataFromUser(Akinator* akinator, elem_t users_word, elem_t us
 
     char new_word[kMaxStringSize] = {};
     printf("%sWhat object were you thinking of? \n%s", TEXT_BLUE, DEFAULT);
-    fgets(new_word, kMaxStringSize, stdin); //лучше gets или getline?
+    fgets(new_word, kMaxStringSize, stdin); // ? лучше gets или getline?
 
     *users_word = *strdup(new_word);
 

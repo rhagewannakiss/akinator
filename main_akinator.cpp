@@ -16,7 +16,7 @@
 
 
 int main() {
-    void_sex Game();
+    Game();
 
     //ThrowError какой-нибудь если на дебаге
 

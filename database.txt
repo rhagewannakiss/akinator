@@ -2,24 +2,24 @@
     ( you dream about it
         ( from movie
             ( from game
-                ( Ayanami Rei nil nil )
-                ( Carl Johnson nil nil )
+                ( Ayanami Rei )
+                ( Carl Johnson )
             )
-            ( Optimus Prime nil nil )
+            ( Optimus Prime )
         )
-        ( otl u Yavorskogo nil nil )
+        ( otl u Yavorskogo )
     )
     ( person
         ( animal
-            ( Biden nil nil )
+            ( Biden )
             ( on phystech
-                ( Stepan Chelomov nil nil )
-                ( poltorashka nil nil )
+                ( Stepan Chelomov )
+                ( poltorashka )
             )
         )
         ( family member
-            ( Alina Polonskaya nil nil )
-            ( your mom nil nil )
+            ( Alina Polonskaya )
+            ( your mom )
         )
     )
 )

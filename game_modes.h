@@ -10,9 +10,10 @@
 #include <cstdlib>
 #include <cstdint>
 
+#include "akinator.h"
 #include "colors.h"
 #include "str_cmp.h"
-#include "akinator.h"
+#include "stack.h"
 
 //---------------------------- PUBLIC ----------------------------
 void_sex Game();

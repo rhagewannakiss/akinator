@@ -6,16 +6,15 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <cstdlib>
-#include <cstdint>
+#include <stdint.h>
 
 #include "colors.h"
 #include "str_cmp.h"
+#include "stack.h"
 
 static node_t*   NodeCtor(elem_t new_str, node_t* parent);
 
-//static node_t**  FindRoot(node_t** current_node);
+static node_t**  FindRoot(node_t** current_node);
 static char*     ReadString(FILE* database_file, Akinator* akinator);
 static node_t*   ParseDataBaseFile(FILE* database_file, Akinator* akinator, node_t* parent);
 
@@ -108,7 +107,16 @@ static node_t* ParseDataBaseFile(FILE* database_file, Akinator* akinator, node_t
     assert(database_file != nullptr);
     assert(akinator !=      nullptr);
 
-    char current_char = fgetc(database_file);
+   // char current_char = fgetc(database_file);
+    char current_char = '\0';
+    int current_char_int = 0;
+
+    // while ((current_char_int = fgetc(database_file)) != EOF) {
+    //     current_char = (char)current_char_int;
+    // }
+
+    // fclose(database_file);
+
 
     while (current_char != EOF) {
         if (current_char == '(') {
@@ -165,10 +173,12 @@ static char* ReadString(FILE* database_file, Akinator* akinator) {
     while (index < kMaxStringSize - 1 && fread(&current_char, sizeof(char), 1, database_file) == 1) {
         if (isspace(current_char)
            || current_char == ')') {
-            fseek(database_file, -1, SEEK_CUR);
+            fseek(database_file, 1, SEEK_CUR); // было -1
             break;
         }
-        string_buffer[index++] = current_char;
+
+        index++;
+        string_buffer[index] = current_char;
     }
 
     string_buffer[index] = '\0';
@@ -211,23 +221,23 @@ void_sex InsertNewNode(node_t* root, elem_t new_data, elem_t new_question, node_
 }
 
 //--------------------------------------- FIND ROOT -------------------------------------
-// static node_t** FindRoot(node_t** current_node) {
-//     assert(current_node != nullptr);
+static node_t** FindRoot(node_t** current_node) {
+    assert(current_node != nullptr);
 
-//     while ((*current_node)->parent != nullptr) {
-//         *current_node = (*current_node)->parent;
-//     }
-//     //сюда можно внедрить запись с конца всех вопросов для выдачи определения
-//     //отмена это будет реализовано через хранение обхода дерева в структуре акинатора
-//     return current_node;
-//}
+    while ((*current_node)->parent != nullptr) {
+        *current_node = (*current_node)->parent;
+    }
+    //сюда можно внедрить запись с конца всех вопросов для выдачи определения
+    //отмена это будет реализовано через хранение обхода дерева в структуре акинатора
+    return current_node;
+}
 
 //--------------------------------------- GET ANSWER ------------------------------------
 Answers GetAnswer() {
     printf("%sEnter your choice: %s", TEXT_BLUE, DEFAULT);
 
     char choice;
-    choice = getchar();
+    choice = (char)getchar();
 
     if (choice == 'g' || choice == 'G') {
         return GUESS;
@@ -245,8 +255,8 @@ Answers GetAnswer() {
     if (choice == 'e' || choice == 'E') {
         return EXIT;
     }
-    if (choice == 'c' || choice == 'C') { //NOTE -  два раза сравниваем с с нужно это исправиь иначе будет крашиться
-        return CONTINUE;
+    if (choice == 'k' || choice == 'K') { //? два раза сравниваем с с нужно это исправиь иначе будет крашиться
+        return KEEP_UP;
     }
 
     if (choice == 'y' || choice == 'Y') {

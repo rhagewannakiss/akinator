@@ -7,11 +7,13 @@
 #include <malloc.h>
 #include <stdio.h>
 
+// FIXME
 #include <cstdlib>
 #include <cstdint>
 
 #include "colors.h"
 #include "str_cmp.h"
+#include "stack.h"
 
 static const uint32_t kMaxStringSize = 128;
 
@@ -25,7 +27,7 @@ typedef enum Answers {
     COMPARE =          0x03,
 
     EXIT =             0x04,
-    CONTINUE =         0x05,
+    KEEP_UP =          0x05,
 
     YES =              0x06,
     NO =               0x07,
