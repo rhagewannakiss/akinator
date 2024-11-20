@@ -1,19 +1,18 @@
 #ifndef AKINATOR_H_
 #define AKINATOR_H_
 
+#include "stack.h"
+
 #include <ctype.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdio.h>
-
-// FIXME
-#include <cstdlib>
-#include <cstdint>
+#include <string.h>
+#include <stdint.h>
 
 #include "colors.h"
 #include "str_cmp.h"
-#include "stack.h"
 
 static const uint32_t kMaxStringSize = 128;
 
@@ -34,7 +33,7 @@ typedef enum Answers {
 
     MENU =             0x08,
 
-    UNKNOWN_COMMAND = -0x01
+    UNKNOWN_COMMAND =  0xFF
 } Answers;
 
 typedef enum AkinatorError {
@@ -63,8 +62,8 @@ typedef struct Akinator {
     AkinatorError error;
 
     node_t*       last_node;
-    //еще есть идея хранить здесь указател на корень дерева чтобы вызыать тупо сруктуру
-    //стэк для записи шагов и для попа при распечатке определения
+
+    struct Stack* stack;
 } Akinator;
 
 //---------------------------- PUBLIC ----------------------------

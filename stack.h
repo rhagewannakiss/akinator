@@ -7,14 +7,12 @@
 #include "akinator.h"
 
 
-#define TOSTR(x) #x
-
 static const int kDefaultCapacity =   32;
 static const int kMulReallocUp =      2;
 static const int kDivForReallocDown = 4;
 
-typedef void   void_sex;
-typedef size_t stack_t;
+typedef void  void_sex;
+typedef void* stack_t;
 
 typedef enum StackError {
     StackError_kOk =                    0x00,
@@ -32,18 +30,18 @@ typedef enum StackError {
     StackError_kEmptyTopElem =          0x08,
 } StackError;
 
-
 typedef struct Stack {
     stack_t*   data;
 
-    ssize_t    number_of_elems;
-    ssize_t    capacity;
+    size_t    number_of_elems;
+    size_t    capacity;
+    size_t     size_of_elem;
 
     StackError error;
 } Stack;
 
 //*---------------------------------- PUBLIC ----------------------------------
-StackError  StackCtor(Stack* stack);
+StackError  StackCtor(Stack* stack, size_t size_of_elem);
 void_sex    StackDtor(Stack* stack);
 
 StackError  StackPush(Stack* stack, stack_t new_elem);

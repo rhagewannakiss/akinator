@@ -6,16 +6,15 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdio.h>
-
-#include <cstdlib>
-#include <cstdint>
+#include <string.h>
+#include <stdint.h>
 
 #include "akinator.h"
+#include "stack.h"
 #include "colors.h"
 #include "str_cmp.h"
-#include "stack.h"
 
 //---------------------------- PUBLIC ----------------------------
-void_sex Game();
+void_sex Game(const char* database_file);
 
 #endif //GAME_MODES_H_

@@ -1,4 +1,5 @@
 #include "akinator.h"
+#include "stack.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -10,7 +11,6 @@
 
 #include "colors.h"
 #include "str_cmp.h"
-#include "stack.h"
 
 static node_t*   NodeCtor(elem_t new_str, node_t* parent);
 
@@ -65,12 +65,20 @@ Akinator* AkinatorCtor() {
         return nullptr;
     }
 
-   akinator->error =     AkinatorError_kOk;
-   akinator->last_node = nullptr;
+    akinator->error =     AkinatorError_kOk;
+    akinator->last_node = nullptr;
 
-    //вот здесь поиграться со стеком
+    akinator->stack = (Stack*)calloc(1, sizeof(Stack));
+    if (akinator->stack == nullptr) {
+        ReportError("couldn't allocate memory for the stack.");
+        AkinatorDtor(akinator);
+        free(akinator->stack);
+        return nullptr;
+    }
 
-   return akinator;
+    StackCtor(akinator->stack, sizeof(node_t));
+
+    return akinator;
 }
 
 //------------------------------------- AKINATOR DTOR ------------------------------------
@@ -80,111 +88,169 @@ Status AkinatorDtor(Akinator* akinator) {
     akinator->error =     AkinatorError_kOk;
     akinator->last_node = nullptr;
 
-    memset(akinator, 0, sizeof(Akinator));
-    akinator = nullptr;
+    StackDtor(akinator->stack);
+    akinator->stack = nullptr;
 
+    akinator = nullptr;
     return SUCCESS;
 }
-//---------------------------------- GET TREE FROM FILE ----------------------------------
-node_t* GetTreeFromDataBaseFile(const char* name_of_database_file, Akinator* akinator) {
-    assert(name_of_database_file != NULL);
 
-    FILE* database_file = fopen(name_of_database_file, "r");
-    if (database_file == nullptr) {
-        ReportError("failed to open database file.");
-        akinator->error = AkinatorError_kReadingFromFileError;
-        return nullptr;
-    }
-    node_t* root = ParseDataBaseFile(database_file, akinator, nullptr);
+// //---------------------------------- GET TREE FROM FILE ----------------------------------
+// node_t* GetTreeFromDataBaseFile(const char* name_of_database_file, Akinator* akinator) {
+//     assert(name_of_database_file != NULL);
 
-    fclose(database_file);
+//     if (name_of_database_file == NULL) {
+//         fprintf(stderr, "name of databaase file null ");
+//     }
 
-    return root;
+//     FILE* database_file = fopen(name_of_database_file, "r");
+//     if (database_file == nullptr) {
+//         ReportError("failed to open database file.");
+//         akinator->error = AkinatorError_kReadingFromFileError;
+//         return nullptr;
+//     }
+//     node_t* root = ParseDataBaseFile(database_file, akinator, nullptr);
+//     if (root == nullptr) {
+//         fprintf(stderr, "root nullptr");
+//     }
+
+//     fclose(database_file);
+
+//     return root;
+// }
+
+// //------------------------------------- PARSING TREE -------------------------------------
+// static node_t* ParseDataBaseFile(FILE* database_file, Akinator* akinator, node_t* parent) {
+//     assert(database_file != nullptr);
+//     assert(akinator !=      nullptr);
+
+//     char current_char = '\0';
+
+//     if (fread(&current_char, sizeof(char), 1, database_file) != 1) {
+//         fprintf(stderr, "fread failed ParseDatabaseFile");
+//         return nullptr;
+//    }
+
+//     if (current_char == '(') {
+//         char* current_string = ReadString(database_file, akinator);
+//         fprintf(stderr, "readstring current_string failed");
+//         if (current_string == nullptr) {
+//             akinator->error = AkinatorError_kReadingFromFileError;
+//             ReportError("empty string.");
+//             return nullptr;
+//         }
+
+//         if (current_char == ')') {
+//             node_t* new_node = NodeCtor(current_string, parent);
+//             if (new_node == nullptr) {
+//                 akinator->error = AkinatorError_kMemoryAllocationError;
+//                 ReportError("couldn't parse a string from file.");
+//                 free(current_string);
+//                 return nullptr;
+//             }
+
+//             free(current_string);
+
+//             new_node->left =  ParseDataBaseFile(database_file, akinator, new_node);
+//             if (new_node->left == nullptr) {
+//                 ReportError("empty left.");
+//             }
+//             new_node->right = ParseDataBaseFile(database_file, akinator, new_node);
+//             if (new_node->right == nullptr) {
+//                 ReportError("empty right.");
+//             }
+
+//             return new_node;
+//         } else {
+//             free(current_string);
+//             return nullptr;
+//         }
+//     } else {
+//         return nullptr;
+//     }
+
+//     return nullptr;
+// }
+
+void_sex ptr_buffer(size_t onegin_size, char* buffer_onegin, char** start_ptr_array, char** end_ptr_array) {
+    assert(buffer_onegin != NULL);
+    assert(start_ptr_array != NULL);
+    assert(end_ptr_array !=  NULL);
+
+    int counter = 1;
+    start_ptr_array[0] = buffer_onegin;
+
+    for (size_t i = 0; i < onegin_size; i++)
+    {
+        #ifdef __linux__
+            if (buffer_onegin[i] == '\0') {
+                start_ptr_array[counter] = &buffer_onegin[i + 1] ;
+                end_ptr_array[counter - 1] = &buffer_onegin[i];
+                counter++;
+            }
+        #else //windows
+            #error "fuck windows"
+        #endif // __linux__ windows
+   }
+    end_ptr_array[counter] = buffer_onegin + onegin_size - 1;
 }
 
-//------------------------------------- PARSING TREE -------------------------------------
-static node_t* ParseDataBaseFile(FILE* database_file, Akinator* akinator, node_t* parent) {
-    assert(database_file != nullptr);
-    assert(akinator !=      nullptr);
+//------------------------------------ BUFFER -----------------------------------------
 
-   // char current_char = fgetc(database_file);
-    char current_char = '\0';
-    int current_char_int = 0;
+size_t read_from_file(char* buffer_onegin, size_t onegin_size, FILE* file_onegin) {
+    assert(file_onegin   != NULL);
+    assert(buffer_onegin != NULL);
 
-    // while ((current_char_int = fgetc(database_file)) != EOF) {
-    //     current_char = (char)current_char_int;
-    // }
+    size_t fread_readed = fread(buffer_onegin,
+                                     sizeof(char),
+                                     onegin_size,
+                                     file_onegin);
+    buffer_onegin[onegin_size] = '\0';
 
-    // fclose(database_file);
-
-
-    while (current_char != EOF) {
-        if (current_char == '(') {
-            char* current_string = ReadString(database_file, akinator);
-            if (current_string == nullptr) {
-                akinator->error = AkinatorError_kReadingFromFileError;
-                ReportError("empty string.");
-                return nullptr;
-            }
-
-            if (strcmp(current_string, "nil") != 0) {
-                node_t* new_node = NodeCtor(current_string, parent);
-                if(new_node == nullptr) {
-                    akinator->error = AkinatorError_kMemoryAllocationError;
-                    ReportError("couldn't parse a string from file.");
-                    free(current_string);
-                    return nullptr;
-                }
-
-                free(current_string);
-
-                new_node->left =  ParseDataBaseFile(database_file, akinator, new_node);
-                new_node->right = ParseDataBaseFile(database_file, akinator, new_node);
-
-                return new_node;
-            }
-            else {
-                free(current_string);
-                return nullptr;
-            }
-        }
-        else {
-            return nullptr;
-        }
-    }
-
-    return nullptr;
+    return fread_readed;
 }
 
-//-------------------------------------- READ STRING ------------------------------------
-static char* ReadString(FILE* database_file, Akinator* akinator) {
-    assert(database_file != nullptr);
+// //-------------------------------------- READ STRING ------------------------------------
+// static char* ReadString(FILE* database_file, Akinator* akinator) {
+//     assert(database_file != nullptr);
 
-    char* string_buffer = (char*)calloc(kMaxStringSize, sizeof(char));
-    if (string_buffer ==  nullptr) {
-        akinator->error = AkinatorError_kMemoryAllocationError;
-        ReportError(" memory allocation failed in ReadString.");
-        return nullptr;
-    }
+//     char* string_buffer = (char*)calloc(kMaxStringSize, sizeof(char));
+//     if (string_buffer ==  nullptr) {
+//         akinator->error = AkinatorError_kMemoryAllocationError;
+//         ReportError(" memory allocation failed in ReadString.");
+//         return nullptr;
+//     }
 
-    size_t index = 0;
-    char current_char = '0';
+//     size_t index = 0;
+//     char current_char = '\0';
 
-    while (index < kMaxStringSize - 1 && fread(&current_char, sizeof(char), 1, database_file) == 1) {
-        if (isspace(current_char)
-           || current_char == ')') {
-            fseek(database_file, 1, SEEK_CUR); // было -1
-            break;
-        }
+//     while (index < kMaxStringSize - 1
+//         && isspace(current_char) != 0
+//         && current_char != '('
+//         && current_char != ')') {
+//             string_buffer[index] = current_char;
+//             index++;
+//             if (fread(&current_char, sizeof(char), 1, database_file) != 1) {
+//                 break;
+//             }
 
-        index++;
-        string_buffer[index] = current_char;
-    }
+//         string_buffer[index] = '\0';
 
-    string_buffer[index] = '\0';
+//         if (isspace(current_char)
+//            || current_char == ')') {
+//             fseek(database_file, -1, SEEK_CUR);
+//             break;
+//         }
 
-    return string_buffer;
-}
+//         index++;
+//         string_buffer[index] = current_char;
+//     }
+
+//     string_buffer[index] = '\0';
+//     printf("string buffer: %s", string_buffer);
+
+//     return string_buffer;
+// }
 
 //------------------------------------ INSERT NEW DATA -----------------------------------
 void_sex InsertNewNode(node_t* root, elem_t new_data, elem_t new_question, node_t* previous_data) {
@@ -227,8 +293,7 @@ static node_t** FindRoot(node_t** current_node) {
     while ((*current_node)->parent != nullptr) {
         *current_node = (*current_node)->parent;
     }
-    //сюда можно внедрить запись с конца всех вопросов для выдачи определения
-    //отмена это будет реализовано через хранение обхода дерева в структуре акинатора
+
     return current_node;
 }
 
@@ -255,7 +320,7 @@ Answers GetAnswer() {
     if (choice == 'e' || choice == 'E') {
         return EXIT;
     }
-    if (choice == 'k' || choice == 'K') { //? два раза сравниваем с с нужно это исправиь иначе будет крашиться
+    if (choice == 'k' || choice == 'K') {
         return KEEP_UP;
     }
 
@@ -268,9 +333,7 @@ Answers GetAnswer() {
     }
     if (choice == 'm' || choice == 'M') {
         return MENU;
-    }
-
-    else return UNKNOWN_COMMAND;
+    } else return UNKNOWN_COMMAND;
 }
 
 //-------------------------------------- REPORT ERROR -------------------------------------

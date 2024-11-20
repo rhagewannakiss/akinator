@@ -6,28 +6,21 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "akinator.h"
 #include "colors.h"
 
 static Status   StackRealloc(Stack* stack);
 static Status   StackReallocUp(Stack* stack);
 static Status   StackReallocDown(Stack* stack);
-static void_sex Poison(Stack* stack);
 
 //----------------------------------- CTOR ----------------------------------
-
-StackError StackCtor(Stack* stack) {
+StackError StackCtor(Stack* stack, size_t size_of_elem) {
     assert(stack != nullptr);
-
-    if (stack == NULL) {
-        stack->error = StackError_kNullPtr;
-        return stack->error;
-    }
 
     stack->number_of_elems = 0;
     stack->capacity = kDefaultCapacity;
+    stack->size_of_elem = size_of_elem;
 
-    stack->data = (stack_t*)calloc((size_t)stack->capacity, sizeof(stack_t));
+    stack->data = (stack_t*)calloc((size_t)stack->capacity, size_of_elem);
 
     if (stack->data == NULL) {
         stack->error = StackError_kMemoryAllocationError;
@@ -40,48 +33,47 @@ StackError StackCtor(Stack* stack) {
 }
 
 //----------------------------------- DTOR ----------------------------------
-
 void_sex StackDtor(Stack* stack) {
     assert(stack != nullptr);
     StackAssert(stack);
 
     free(stack->data);
 
-    // stack->number_of_elems =  0;
-    // stack->capacity =         0;
+    stack->number_of_elems =  0;
+    stack->capacity =         0;
+    stack->size_of_elem =     0;
 
-    // stack->data =             NULL;
-    // stack->error =       StackError_kOk;
+    stack->data =             NULL;
+    stack->error =  StackError_kOk;
 
-    memset(stack, sizeof(stack), 0);
+   // memset(stack, sizeof(stack), 0);
 }
 
 //--------------------------------- PUSH -------------------------------------
-
-StackError StackPush(Stack* stack, stack_t new_elem) {
+StackError StackPush(Stack* stack, const stack_t new_elem) {
     StackAssert(stack);
 
-    if (stack->number_of_elems + 1 == stack->capacity - 2) {
-        stack->capacity *= kMulReallocUp;
-        StackRealloc(stack);
+    if (stack->number_of_elems + 1 == stack->capacity) {
+        if (StackRealloc(stack) != SUCCESS) {
+            return stack->error;
+        }
     }
 
-    stack->data[stack->number_of_elems + 1] = new_elem;
-    stack->number_of_elems++;
+    stack_t new_data = (char*)stack->data + (stack->number_of_elems * stack->size_of_elem);
+    memcpy(new_data, new_elem, stack->size_of_elem);
 
-    Poison(stack);
+    stack->number_of_elems++;
 
     StackAssert(stack);
     return StackError_kOk;
 }
 
 //--------------------------------- POP --------------------------------------
-
 StackError StackPop(Stack* stack, stack_t* top_elem) {
     StackAssert(stack);
 
     if (stack->number_of_elems <= 0) {
-        stack->error = StackError_kZeroElemes;
+        stack->error = StackError_kUnderflow;
         return stack->error;
     }
 
@@ -90,62 +82,44 @@ StackError StackPop(Stack* stack, stack_t* top_elem) {
         return stack->error;
     }
 
-    fprintf(stderr, "n of elems %ld\n", stack->number_of_elems);
+    stack->number_of_elems--;
+    stack_t data = (char*)stack->data + (stack->number_of_elems * stack->size_of_elem);
+    memcpy(top_elem, data, stack->size_of_elem);
 
-    *top_elem = (stack->data)[stack->number_of_elems - 1];
-
-    if (stack->number_of_elems - 1 == (stack->capacity / (2 * kMulReallocUp))) {
-        stack->capacity = stack->capacity > kDefaultCapacity
-                        ? stack->capacity / kMulReallocUp
-                        : kDefaultCapacity;
+    if (stack->number_of_elems <= stack->capacity / kDivForReallocDown
+        && stack->capacity > kDefaultCapacity) {
         StackRealloc(stack);
     }
-
-    stack->number_of_elems--;
-
-    Poison(stack);
 
     return stack->error;
 }
 
 //----------------------------------- ASSERT FUNCTION -----------------------------
-
 StackError StackAssert(Stack* stack) {
     stack->error = StackError_kOk;
 
-    if (stack->data == NULL) {
-        stack->error = StackError::StackError_kMemoryAllocationError;
+    if (stack->data == nullptr || stack == nullptr) {
+        stack->error = StackError_kMemoryAllocationError;
+        return stack->error;
         abort();
     }
 
-    if (stack->capacity <= 0) {
-        stack->error = StackError::StackError_kWrongCapacity;
+    if (stack->capacity <= 0 || stack->size_of_elem <= 0) {
+        stack->error = StackError_kWrongCapacity;
+        return stack->error;
         abort();
     }
 
-    if (stack->number_of_elems > stack->capacity - 2) {
-        stack->error = StackError::StackError_kOverflow;
+    if (stack->number_of_elems > stack->capacity) {
+        stack->error = StackError_kOverflow;
+        return stack->error;
         abort();
     }
 
-    if (stack->number_of_elems < 0) {
-        stack->error = StackError::StackError_kUnderflow;
-        abort();
-    }
-}
-
-//---------------------------------- POISON FUNCTION ---------------------------------
-
-static void_sex Poison(Stack* stack) {
-    StackAssert(stack);
-
-    for (int i = 1; (stack->number_of_elems) + i < (stack->capacity - 1); i++) {
-        (stack->data)[(stack->number_of_elems) + i] = 0xC0CA14E;
-    }
+    return stack->error;
 }
 
 //---------------------------------- REALLOC UP --------------------------------------
-
 static Status StackReallocUp(Stack* stack) {
     assert(stack != NULL);
 
@@ -179,7 +153,7 @@ static Status StackReallocDown(Stack* stack) {
 static Status StackRealloc(Stack* stack) {
     assert(stack != nullptr);
 
-    if (sizeof(stack->data)/sizeof(stack_t) < stack->capacity / kDivForReallocDown
+    if (stack->capacity - 1 < stack->capacity / kDivForReallocDown
      && stack->capacity > kDefaultCapacity) {
         if (StackReallocDown(stack) == FAILURE) {
             stack->error = StackError_kReallocationfailed;
@@ -187,7 +161,7 @@ static Status StackRealloc(Stack* stack) {
         }
     }
 
-    if (sizeof(stack->data)/sizeof(stack_t) >= stack->capacity) {
+    if (stack->capacity + 1 >= stack->capacity) {
         if (StackReallocUp(stack) == FAILURE) {
             return FAILURE;
         }
@@ -195,45 +169,3 @@ static Status StackRealloc(Stack* stack) {
 
     return SUCCESS;
 }
-
-//-------------------------------------- STRING CONVERTER ---------------------------------
-
-// написать функцию которая будет принимать стак элем т и распечатывает его или оформляет
-// в строку и передавать в дамп указатель на функцию
-//char* string_converter(Stack* stack) {
-
-    // size_t size_of_arg = ;
-
-    // char* unconverted_str = (char*)malloc(size_of_arg * 2 + 1);
-
-    // if (unconverted_str == NULL) {
-    //     return NULL;
-    // }
-
-    // switch (size_of_arg) {
-    //     case sizeof(char):
-    //         sprintf(unconverted_str, "%c", *(char*)ptr);
-    //         break;
-    //     case sizeof(short):
-    //         sprintf(unconverted_str, "%hd", *(short*)ptr);
-    //         break;
-    //     case sizeof(int):
-    //         sprintf(unconverted_str, "%d", *(int*)ptr);
-    //         break;
-    //     case sizeof(long):
-    //         sprintf(unconverted_str, "%ld", *(long*)ptr);
-    //         break;
-    //     case sizeof(float):
-    //         sprintf(unconverted_str, "%f", *(float*)ptr);
-    //         break;
-    //     case sizeof(double):
-    //         sprintf(unconverted_str, "%f", *(double*)ptr);
-    //         break;
-    //     case sizeof(long double):
-    //         sprintf(unconverted_str, "%Lf", *(long double*)ptr);
-    //         break;
-    //     default: ________;
-    // }
-
-    // return unconverted_str;
-    //}

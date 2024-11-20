@@ -1,4 +1,5 @@
 #include "game_modes.h"
+#include "stack.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -6,46 +7,50 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <cstdlib>
-#include <cstdint>
+#include <stdint.h>
 
 #include "akinator.h"
 #include "colors.h"
 #include "str_cmp.h"
-#include "stack.h"
 
-static void_sex  MainPage(node_t* root_ptr, Akinator* akinator);
+static void_sex MainPage(Akinator* akinator, node_t* root_ptr);
 
-static void_sex  ShowTree(node_t* root_ptr, Akinator* akinator);
-static void_sex  GuessMode(node_t* root_ptr, Akinator* akinator);
-static void_sex  DefineMode(node_t* root_ptr, Akinator* akinator);
-static void_sex  ExitProgram(node_t* root_ptr, Akinator* akinator);
-static void_sex  CompareObjects(node_t* root_ptr, Akinator* akinator);
+static void_sex ShowTree(Akinator* akinator, node_t* root_ptr);
+static void_sex GuessMode(Akinator* akinator, node_t* root_ptr);
+static void_sex DefineMode(Akinator* akinator, node_t* root_ptr);
+static void_sex ExitProgram(Akinator* akinator, node_t* root_ptr);
+static void_sex CompareObjects(Akinator* akinator, node_t* root_ptr);
 
-static Answers   AskQuestions(node_t* root_ptr, Akinator* akinator);
-static void_sex  GetDataFromUser(Akinator* akinator, elem_t users_word, elem_t users_feature);
+static Answers  AskQuestions(Akinator* akinator, node_t* current_node);
+static void_sex GetDataFromUser(Akinator* akinator, elem_t users_word, elem_t users_feature);
+static Status   SearchWordInTree(node_t* current_node, const char* target_word, Stack* stack);
 
 //======================================== PUBLIC ========================================
 //----------------------------------------- GAME -----------------------------------------
-void_sex Game() {
+void_sex Game(const char* database_file) {
     //PrintDisneyGenie();
     printf("Welcome to the Akinator Game!\n\n");
 
     Akinator* akinator = AkinatorCtor();
-                                            // FIXME вынести хотя бы в константу
-    node_t* root_ptr = GetTreeFromDataBaseFile("database.txt", akinator);
 
-    MainPage(root_ptr, akinator);
+    node_t* root_ptr = GetTreeFromDataBaseFile(database_file, akinator);
+    if (root_ptr == nullptr) {
+        ReportError("Failed to construct the tree from the database file.");
+        AkinatorDtor(akinator);
+        TreeDtor(root_ptr);
+        return;
+    }
+
+    MainPage(akinator, root_ptr);
 }
+
 //--------------------------------------- MAIN PAGE --------------------------------------
-static void_sex MainPage(node_t* root_ptr, Akinator* akinator) { // NOTE лучше основную структуру(в данном случае акинатор) передавать первым
+static void_sex MainPage(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
-    while (1) { // NOTE можно true
+    while (true) {
         printf("%sPlease, choose the game mode:%s\n", TEXT_BLUE, DEFAULT);
-
 
         printf("%s[G]%suess\n", BCKGR_YELLOW, TEXT_YELLOW);
         printf("%s[D]%sefine\n", BCKGR_YELLOW, TEXT_YELLOW);
@@ -59,23 +64,23 @@ static void_sex MainPage(node_t* root_ptr, Akinator* akinator) { // NOTE луч�
 
         switch (choice_num) {
             case GUESS:
-                GuessMode(root_ptr, akinator);
+                GuessMode(akinator, root_ptr);
                 break;
 
             case DEFINE:
-                DefineMode(root_ptr, akinator);
+                DefineMode(akinator, root_ptr);
                 break;
 
             case SHOW_TREE:
-                ShowTree(root_ptr, akinator);
+                ShowTree(akinator, root_ptr);
                 break;
 
             case COMPARE:
-                CompareObjects(root_ptr, akinator);
+                CompareObjects(akinator, root_ptr);
                 break;
 
             case EXIT:
-                ExitProgram(root_ptr, akinator);
+                ExitProgram(akinator, root_ptr);
                 break;
 
             default:
@@ -87,35 +92,34 @@ static void_sex MainPage(node_t* root_ptr, Akinator* akinator) { // NOTE луч�
 
 //***************************************** MODES ****************************************
 //----------------------------------------- GUESS ----------------------------------------
-static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
+static void_sex GuessMode(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
     printf("%sGuess mode selected.%s\n", TEXT_YELLOW, DEFAULT);
 
-    if (AskQuestions(root_ptr, akinator) == YES) {
-        printf("%sIt's so easy to read people's minds these days, lol, almost boring. Do you dare challenge me once more? Or will you, the greatest, return to the menu to shamefully admit defeat and leave the game? Which will you choose, player?%s",  TEXT_BLUE, DEFAULT);
-        printf("%s[K]%eep up%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
+    if (AskQuestions(akinator, root_ptr) == YES) {
+        printf("%sIt's so easy to read people's minds these days, lol, almost boring. Do you dare to challenge me once more? Or will you return to the menu to shamefully admit defeat and leave the game? Which road will you choose, player?%s",  TEXT_BLUE, DEFAULT);
+        printf("%s[K]%seep up%s    %s[M]%senu%s ", BCKGR_BLUE, TEXT_BLUE, DEFAULT, BCKGR_BLUE, TEXT_BLUE, DEFAULT);
         printf("\t%s[E]%sxit\n", TEXT_RED, DEFAULT);
 
         int choice_num = GetAnswer();
 
         switch (choice_num) {
                 case EXIT:
-                    ExitProgram(root_ptr, akinator);
+                    ExitProgram(akinator, root_ptr);
                     break;
                 case MENU:
-                    MainPage(root_ptr, akinator);
+                    MainPage(akinator, root_ptr);
                     break;
                 case KEEP_UP:
-                    GuessMode(root_ptr, akinator);
+                    GuessMode(akinator, root_ptr);
                     break;
                 default:
                     printf("%sInvalid choice%s u stupid ass. Please enter one of the letters %s('K'/'M'/'E')%s.\n", TEXT_BLUE, DEFAULT, BCKGR_BLUE, DEFAULT);
                     break;
             }
-    } // NOTE } else {
-    else {
+    } else {
         printf("%sI've never known about this before... Share your knowledge, will you?%s", TEXT_BLUE, DEFAULT);
 
         char users_word[kMaxStringSize] = {};
@@ -141,7 +145,7 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
             }
         }
 
-       //? GetDataFromUser(akinator, users_word, users_feature);
+        GetDataFromUser(akinator, users_word, users_feature);
 
         InsertNewNode(root_ptr, users_word, users_feature, akinator->last_node);
         printf("%sThank you, player. I'll consider that in the future.\n Do you wish to keep up?%s", TEXT_BLUE, DEFAULT);
@@ -152,29 +156,58 @@ static void_sex GuessMode(node_t* root_ptr, Akinator* akinator) {
 
         switch (choice_num) {
                 case EXIT:
-                    ExitProgram(root_ptr, akinator);
+                    ExitProgram(akinator, root_ptr);
                     break;
                 case MENU:
-                    MainPage(root_ptr, akinator);
+                    MainPage(akinator, root_ptr);
                     break;
                 case KEEP_UP:
-                    GuessMode(root_ptr, akinator);
+                    GuessMode(akinator, root_ptr);
                     break;
                 default:
                     printf("%sInvalid choice%s. Please enter one of the letters %s('C'/'M'/'E')%s.\n", TEXT_BLUE, DEFAULT, BCKGR_BLUE, DEFAULT);
                     break;
-            }
+        }
     }
-
 }
 
 //--------------------------------------- DEFINER ----------------------------------------
-static void_sex DefineMode(node_t* root_ptr, Akinator* akinator) {
+static void_sex DefineMode(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
     printf("%sDefine mode selected.%s\n", TEXT_YELLOW, DEFAULT);
 
+    char users_word[kMaxStringSize] = {};
+
+    printf("%sWhat object do you want to define? %s", TEXT_BLUE, DEFAULT);
+
+    fgets(users_word, kMaxStringSize, stdin);
+
+    size_t word_len = strlen(users_word);
+    if (word_len > 0 && users_word[word_len - 1] == '\n') {
+        users_word[word_len - 1] = '\0';
+    }
+
+    StackDtor(akinator->stack);
+    akinator->stack = (Stack*)calloc(1, sizeof(Stack));
+    StackCtor(akinator->stack, sizeof(char*));
+
+    if (SearchWordInTree(root_ptr, users_word, akinator->stack)) {
+        printf("%sThe word '%s' is found in the tree!%s\n", TEXT_BLUE, users_word, DEFAULT);
+
+        char* question = {};
+
+        while (StackPop(akinator->stack, (stack_t*)&question) == StackError_kOk) {
+            printf("%s ", question);
+
+            free(question);
+        }
+        printf("\n");
+    } else {
+        printf("%sThe word '%s' is not found in the tree.%s\n", TEXT_RED, users_word, DEFAULT);
+    }
+}
 
 
     //!принимаем слово от пользователя, ищем его в дереве
@@ -185,11 +218,8 @@ static void_sex DefineMode(node_t* root_ptr, Akinator* akinator) {
 
 
 
-
-}
-
 //--------------------------------------- COMPARER ---------------------------------------
-static void_sex CompareObjects(node_t* root_ptr, Akinator* akinator) {
+static void_sex CompareObjects(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
@@ -198,7 +228,7 @@ static void_sex CompareObjects(node_t* root_ptr, Akinator* akinator) {
 }
 
 //--------------------------------------- SHOW TREE --------------------------------------
-static void_sex ShowTree(node_t* root_ptr, Akinator* akinator) {
+static void_sex ShowTree(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
@@ -209,7 +239,7 @@ static void_sex ShowTree(node_t* root_ptr, Akinator* akinator) {
 }
 
 //------------------------------------------ EXIT ----------------------------------------
-static void_sex ExitProgram(node_t* root_ptr, Akinator* akinator) {
+static void_sex ExitProgram(Akinator* akinator, node_t* root_ptr) {
     assert(root_ptr != nullptr);
     assert(akinator != nullptr);
 
@@ -231,7 +261,7 @@ static void_sex ExitProgram(node_t* root_ptr, Akinator* akinator) {
                 return;
 
             case NO:
-                MainPage(root_ptr, akinator);
+                MainPage(akinator, root_ptr);
                 break;
 
             default:
@@ -242,22 +272,23 @@ static void_sex ExitProgram(node_t* root_ptr, Akinator* akinator) {
 
 //======================================== STATIC ========================================
 //------------------------------------ ASK QUESTIONS -------------------------------------
-static Answers AskQuestions(node_t* current_node, Akinator* akinator) {
+static Answers AskQuestions(Akinator* akinator, node_t* current_node) {
     assert(current_node != nullptr);
     assert(akinator !=     nullptr);
 
     printf("%s?", current_node->data);
+    StackPush(akinator->stack, current_node->data);
 
     int choice_num = GetAnswer();
 
     switch(choice_num) {
         case YES:
-            return AskQuestions(current_node->right, akinator);
+            return AskQuestions(akinator, current_node->right);
             akinator->last_node = current_node->right;
             break;
 
         case NO:
-            return AskQuestions(current_node->left, akinator);
+            return AskQuestions(akinator, current_node->left);
             akinator->last_node = current_node->left;
             break;
 
@@ -290,4 +321,33 @@ static void_sex GetDataFromUser(Akinator* akinator, elem_t users_word, elem_t us
     fgets(new_feature, kMaxStringSize, stdin);
 
     *users_feature = *strdup(new_feature);
+}
+
+//--------------------------------------- WORD SEARCH ---------------------------------------
+static Status SearchWordInTree(node_t* current_node, const char* target_word, Stack* stack) {
+    assert(current_node != nullptr);
+    assert(target_word !=  nullptr);
+    assert(stack !=        nullptr);
+
+    StackPush(stack, current_node->data);
+
+    if (strcmp(current_node->data, target_word) == 0) {
+        return SUCCESS;
+    }
+
+    if (SearchWordInTree(current_node->left, target_word, stack)) {
+        return SUCCESS;
+    }
+
+    StackPop(stack, nullptr);
+
+    StackPush(stack, current_node->data);
+
+    if (SearchWordInTree(current_node->right, target_word, stack)) {
+        return SUCCESS;
+    }
+
+    StackPop(stack, nullptr);
+
+    return FAILURE;
 }
